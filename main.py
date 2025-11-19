@@ -1,8 +1,13 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Any, Dict
 
-app = FastAPI()
+from database import create_document
+from schemas import Lead
+
+app = FastAPI(title="AI-Powered Web Dev Portfolio API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -14,7 +19,7 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {"message": "Hello from FastAPI Backend!"}
+    return {"message": "Portfolio API running"}
 
 @app.get("/api/hello")
 def hello():
@@ -63,6 +68,19 @@ def test_database():
     response["database_name"] = "✅ Set" if os.getenv("DATABASE_NAME") else "❌ Not Set"
     
     return response
+
+
+class LeadResponse(BaseModel):
+    success: bool
+    message: str
+
+@app.post("/api/lead", response_model=LeadResponse)
+async def create_lead(lead: Lead) -> LeadResponse:
+    try:
+        inserted_id = create_document("lead", lead)
+        return LeadResponse(success=True, message="Thanks! Your message has been received.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unable to submit lead: {str(e)}")
 
 
 if __name__ == "__main__":
